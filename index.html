@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Movie Reviews</title>
+  <style>
+    :root { --bg:#0f172a; --panel:#111827; --muted:#6b7280; --text:#e5e7eb; --accent:#10b981; --danger:#ef4444; --border:#1f2937; }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body { margin:0; background:var(--bg); color:var(--text); font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji"; }
+    .container { max-width: 1120px; margin: 0 auto; padding: 16px; }
+    .nav { position: sticky; top:0; z-index: 10; background: rgba(17,24,39,.9); backdrop-filter: blur(6px); border-bottom: 1px solid var(--border); }
+    .nav-inner { display:flex; align-items:center; justify-content:space-between; gap:12px; height:64px; padding: 0 16px; }
+    .brand { display:flex; align-items:center; gap:10px; font-weight:700; font-size:20px; cursor:pointer; }
+    .brand-dot { width:10px; height:10px; border-radius:50%; background: var(--accent); display:inline-block; }
+    .search { position:relative; flex:1; max-width: 420px; }
+    .search input { width:100%; background:#0b1220; color:var(--text); border:1px solid var(--border); border-radius: 999px; padding:10px 14px; outline:none; }
+    .filters { display:flex; flex-wrap:wrap; gap:8px; margin:16px 0; }
+    .pill { border:1px solid var(--border); background:#0b1220; color:#cbd5e1; padding:8px 12px; border-radius:999px; font-size:14px; cursor:pointer; }
+    .pill.active { background: var(--accent); color:#001; border-color: transparent; }
+    .actions { display:flex; align-items:center; gap:12px; color:#9ca3af; font-size:14px; }
+    .select { background:#0b1220; color:var(--text); border:1px solid var(--border); border-radius:8px; padding:8px 10px; }
+    .grid { display:grid; grid-template-columns: repeat(1, minmax(0,1fr)); gap:16px; }
+    @media (min-width:640px) { .grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+    @media (min-width:1024px) { .grid { grid-template-columns: repeat(3, minmax(0,1fr)); } }
+    @media (min-width:1280px) { .grid { grid-template-columns: repeat(4, minmax(0,1fr)); } }
+    .card { background: var(--panel); border:1px solid var(--border); border-radius:14px; overflow:hidden; box-shadow: 0 6px 16px rgba(0,0,0,.35); cursor:pointer; display:flex; flex-direction:column; }
+    .thumb { position:relative; height:240px; background:#0b1220; }
+    .thumb img { width:100%; height:100%; object-fit:cover; display:block; }
+    .badge { position:absolute; top:10px; left:10px; background:#111827; border:1px solid var(--border); color:#cbd5e1; padding:4px 8px; border-radius:999px; font-size:12px; }
+    .rating { position:absolute; top:10px; right:10px; background:#111827; border:1px solid var(--border); color:#fbbf24; padding:4px 8px; border-radius:8px; font-weight:700; font-size:12px; }
+    .content { padding:12px; display:flex; flex-direction:column; gap:8px; }
+    .title { font-size:16px; font-weight:700; color:#fff; line-height:1.2; min-height:38px; }
+    .meta { display:flex; justify-content:space-between; align-items:center; color:#9ca3af; font-size:12px; }
+    .buttons { display:flex; gap:8px; }
+    .btn { flex:1; display:flex; align-items:center; justify-content:center; gap:8px; padding:10px; border-radius:10px; border:1px solid var(--border); background:#0b1220; color:#cbd5e1; font-weight:600; cursor:pointer; }
+    .btn:hover { border-color:#334155; }
+    .btn.accent { background: var(--accent); color:#062; border-color: transparent; }
+    .btn.danger { background: #1f2937; color:#fecaca; }
+    .muted { color:#94a3b8; }
+    .footer { border-top:1px solid var(--border); margin-top:24px; padding:24px 0; color:#9ca3af; font-size:12px; }
+    .empty { display:none; align-items:center; justify-content:center; flex-direction:column; gap:8px; padding:48px 12px; color:#94a3b8; }
+    .modal-backdrop { position:fixed; inset:0; background:rgba(2,6,23,.8); backdrop-filter: blur(4px); display:none; }
+    .modal { position:fixed; inset:0; display:none; align-items:center; justify-content:center; padding:16px; }
+    .dialog { width:100%; max-width:860px; background:var(--panel); border:1px solid var(--border); border-radius:16px; overflow:hidden; display:grid; grid-template-columns: 1fr; }
+    @media (min-width:768px) { .dialog { grid-template-columns: 2fr 3fr; } }
+    .dialog-left { position:relative; min-height:280px; background:#0b1220; }
+    .dialog-left img { width:100%; height:100%; object-fit:cover; }
+    .dialog-right { padding:16px; display:flex; flex-direction:column; gap:12px; }
+    .dialog-title { font-size:22px; font-weight:800; }
+    .dialog-meta { display:flex; flex-wrap:wrap; gap:12px; font-size:13px; color:#9ca3af; }
+    .close { position:absolute; right:12px; top:12px; background:#0008; color:#fff; border:none; border-radius:999px; width:36px; height:36px; cursor:pointer; font-size:18px; }
+    .review-list { display:flex; flex-direction:column; gap:10px; max-height:160px; overflow:auto; border-top:1px solid var(--border); padding-top:8px; }
+    .review-item { border:1px solid var(--border); border-radius:10px; padding:8px; background:#0b1220; }
+    .review-form { display:grid; grid-template-columns: 1fr; gap:8px; border-top:1px solid var(--border); padding-top:8px; }
+    .review-form input, .review-form textarea { width:100%; background:#0b1220; color:var(--text); border:1px solid var(--border); border-radius:10px; padding:10px; outline:none; }
+    .review-form button { background:var(--accent); color:#062; border:none; border-radius:10px; padding:10px; font-weight:700; cursor:pointer; }
+    .watch { background:#111827; border:1px solid var(--border); color:#cbd5e1; padding:4px 8px; border-radius:8px; font-size:12px; }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <div class="nav-inner container">
+      <div class="brand" id="brand"><span class="brand-dot"></span>Movie Reviews</div>
+      <div class="search"><input id="search" type="text" placeholder="Search titles or directors"></div>
+    </div>
+  </nav>
+  <main class="container">
+    <div class="filters" id="filters"></div>
+    <div class="actions">
+      <span id="count">Showing 0 movies</span>
+      <div style="margin-left:auto; display:flex; align-items:center; gap:8px;">
+        <label for="sort" class="muted">Sort</label>
+        <select id="sort" class="select">
+          <option value="newest">Newest</option>
+          <option value="oldest">Oldest</option>
+          <option value="rating">Top Rated</option>
+          <option value="likes">Most Liked</option>
+        </select>
+      </div>
+    </div>
+    <div id="grid" class="grid"></div>
+    <div id="empty" class="empty">
+      <div style="font-size:36px;">🎬</div>
+      <div>No movies found</div>
+    </div>
+    <div class="footer">© 2025 Movie Reviews. Works on any static server.</div>
+  </main>
+
+  <div id="backdrop" class="modal-backdrop"></div>
+  <div id="modal" class="modal">
+    <div class="dialog">
+      <button class="close" id="close">×</button>
+      <div class="dialog-left"><img id="mPoster" alt="Poster"></div>
+      <div class="dialog-right">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div id="mGenre" class="badge"></div>
+          <div id="mRating" class="rating"></div>
+        </div>
+        <div id="mTitle" class="dialog-title"></div>
+        <div id="mMeta" class="dialog-meta"></div>
+        <div id="mDesc" class="muted"></div>
+        <div style="display:flex; gap:8px;">
+          <button id="mLike" class="btn">♥ Like</button>
+          <button id="mWatch" class="btn">＋ Watchlist</button>
+          <button id="mWrite" class="btn accent">✎ Add Review</button>
+        </div>
+        <div id="reviews" class="review-list"></div>
+        <div id="form" class="review-form" style="display:none;">
+          <input id="rName" placeholder="Your name">
+          <input id="rScore" type="number" min="1" max="10" placeholder="Score (1-10)">
+          <textarea id="rText" rows="3" placeholder="Write a short review"></textarea>
+          <button id="rSubmit">Submit Review</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const genres = ["All","Action","Drama","Sci-Fi","Comedy","Horror","Animation"];
+    const movies = [
+      { id:1, title:"Inception", director:"Christopher Nolan", genre:"Sci-Fi", year:2010, rating:8.8, poster:"https://m.media-amazon.com/images/M/MV5BMjAxMzY3NjcxMV5BMl5BanBnXkFtZTcwNTI5OTM0Mw@@._V1_.jpg", desc:"A thief who steals corporate secrets through dream-sharing technology is given a chance at redemption." },
+      { id:2, title:"The Dark Knight", director:"Christopher Nolan", genre:"Action", year:2008, rating:9.0, poster:"https://m.media-amazon.com/images/M/MV5BMjAyNjYyNjYzOV5BMl5BanBnXkFtZTcwODAyMzYyMw@@._V1_.jpg", desc:"Batman faces the Joker, a criminal mastermind who wants to plunge Gotham into anarchy." },
+      { id:3, title:"Interstellar", director:"Christopher Nolan", genre:"Sci-Fi", year:2014, rating:8.6, poster:"https://m.media-amazon.com/images/M/MV5BMjIxMjgxNzM5NV5BMl5BanBnXkFtZTgwMzM4ODI3MjE@._V1_.jpg", desc:"A team of explorers travel through a wormhole in space in an attempt to ensure humanity's survival." },
+      { id:4, title:"Parasite", director:"Bong Joon-ho", genre:"Drama", year:2019, rating:8.5, poster:"https://m.media-amazon.com/images/M/MV5BZmE2NmQxZjctODk2Mi00YmE4LTg0NzctNzdlYzdkZWM4MjQ3XkEyXkFqcGdeQXVyMTkxNjUyNQ@@._V1_.jpg", desc:"Greed and class discrimination threaten the newly formed symbiotic relationship between the wealthy Park family and the destitute Kim clan." },
+      { id:5, title:"Spirited Away", director:"Hayao Miyazaki", genre:"Animation", year:2001, rating:8.6, poster:"https://m.media-amazon.com/images/M/MV5BMjA5NzI5NDY0MF5BMl5BanBnXkFtZTgwNjYzNjYxMDE@._V1_.jpg", desc:"A young girl enters a world of spirits and must work at a bathhouse to free herself and her parents." },
+      { id:6, title:"Get Out", director:"Jordan Peele", genre:"Horror", year:2017, rating:7.7, poster:"https://m.media-amazon.com/images/M/MV5BMjA0OTQ1NTQ2OF5BMl5BanBnXkFtZTgwOTY3OTgxMTI@._V1_.jpg", desc:"A young African-American visits his white girlfriend's parents for the weekend, where his simmering uneasiness turns into a nightmare." },
+      { id:7, title:"The Grand Budapest Hotel", director:"Wes Anderson", genre:"Comedy", year:2014, rating:8.1, poster:"https://m.media-amazon.com/images/M/MV5BMTEyMzM2NDMzN15BMl5BanBnXkFtZTgwNzcxNTM3MTE@._V1_.jpg", desc:"The adventures of Gustave H, a legendary concierge, and Zero Moustafa, the lobby boy." }
+    ];
+
+    const els = {
+      filters: document.getElementById('filters'),
+      grid: document.getElementById('grid'),
+      empty: document.getElementById('empty'),
+      search: document.getElementById('search'),
+      sort: document.getElementById('sort'),
+      count: document.getElementById('count'),
+      backdrop: document.getElementById('backdrop'),
+      modal: document.getElementById('modal'),
+      close: document.getElementById('close'),
+      mPoster: document.getElementById('mPoster'),
+      mGenre: document.getElementById('mGenre'),
+      mRating: document.getElementById('mRating'),
+      mTitle: document.getElementById('mTitle'),
+      mMeta: document.getElementById('mMeta'),
+      mDesc: document.getElementById('mDesc'),
+      mLike: document.getElementById('mLike'),
+      mWatch: document.getElementById('mWatch'),
+      mWrite: document.getElementById('mWrite'),
+      reviews: document.getElementById('reviews'),
+      form: document.getElementById('form'),
+      rName: document.getElementById('rName'),
+      rScore: document.getElementById('rScore'),
+      rText: document.getElementById('rText'),
+      rSubmit: document.getElementById('rSubmit'),
+      brand: document.getElementById('brand')
+    };
+
+    let state = { genre:"All", query:"", sort:"newest", selected:null };
+
+    function ls(key){ try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch { return null; } }
+    function save(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
+    function likesFor(id){ return ls('likes_'+id) || 0; }
+    function toggleLike(id){ let v = likesFor(id); v += 1; save('likes_'+id, v); }
+    function watchFor(id){ return !!ls('watch_'+id); }
+    function toggleWatch(id){ let v = watchFor(id); save('watch_'+id, v?null:true); }
+    function reviewsFor(id){ return ls('reviews_'+id) || []; }
+    function addReview(id, name, score, text){ const arr = reviewsFor(id); arr.push({ name, score: Number(score), text, at: Date.now() }); save('reviews_'+id, arr); }
+    function avgRating(base, id){ const arr = reviewsFor(id); if(!arr.length) return base; const sum = arr.reduce((a,b)=>a+b.score,0); const avg = (base + (sum/arr.length))/2; return Number(avg.toFixed(1)); }
+
+    function renderFilters(){ els.filters.innerHTML = ''; genres.forEach(g => { const b = document.createElement('button'); b.className = 'pill'+(state.genre===g?' active':''); b.textContent = g; b.onclick = () => { state.genre = g; render(); }; els.filters.appendChild(b); }); }
+
+    function filtered(){ return movies.filter(m => {
+      const matchG = state.genre==='All' || m.genre===state.genre;
+      const q = state.query.toLowerCase();
+      const matchQ = !q || m.title.toLowerCase().includes(q) || m.director.toLowerCase().includes(q);
+      return matchG && matchQ;
+    }).sort((a,b)=>{
+      if(state.sort==='newest') return b.year - a.year;
+      if(state.sort==='oldest') return a.year - b.year;
+      if(state.sort==='rating') return avgRating(b.rating,b.id) - avgRating(a.rating,a.id);
+      if(state.sort==='likes') return likesFor(b.id) - likesFor(a.id);
+      return 0;
+    }); }
+
+    function render(){ const list = filtered(); els.count.textContent = `Showing ${list.length} movie${list.length!==1?'s':''}`; els.grid.innerHTML=''; if(!list.length){ els.grid.style.display='none'; els.empty.style.display='flex'; return; } els.grid.style.display='grid'; els.empty.style.display='none'; list.forEach(m => { const card = document.createElement('div'); card.className='card'; const rt = avgRating(m.rating,m.id).toFixed(1); card.innerHTML = `
+        <div class="thumb">
+          <div class="badge">${m.genre}</div>
+          <div class="rating">★ ${rt}</div>
+          <img src="${m.poster}" alt="${m.title}" onerror="this.src='https://via.placeholder.com/400x600/0b1220/6b7280?text=No+Poster'">
+        </div>
+        <div class="content">
+          <div class="title">${m.title}</div>
+          <div class="meta"><span>${m.year}</span><span class="watch">${watchFor(m.id)?'In Watchlist':'Not in Watchlist'}</span></div>
+          <div class="buttons">
+            <button class="btn" data-like="${m.id}">♥ ${likesFor(m.id)} Like</button>
+            <button class="btn accent" data-open="${m.id}">Details</button>
+          </div>
+        </div>`; els.grid.appendChild(card); card.querySelector('[data-like]').onclick = (e)=>{ e.stopPropagation(); toggleLike(m.id); render(); }; card.querySelector('[data-open]').onclick = ()=> openModal(m); }); }
+
+    function openModal(m){ state.selected = m; els.mPoster.src = m.poster; els.mGenre.textContent = m.genre; els.mRating.textContent = '★ '+avgRating(m.rating,m.id).toFixed(1); els.mTitle.textContent = m.title; els.mMeta.innerHTML = `${m.year} • Directed by ${m.director}`; els.mDesc.textContent = m.desc; els.mLike.textContent = '♥ '+likesFor(m.id)+' Like'; els.mWatch.textContent = watchFor(m.id)?'✓ In Watchlist':'＋ Watchlist'; els.reviews.innerHTML = ''; const arr = reviewsFor(m.id); if(!arr.length){ const i = document.createElement('div'); i.className='muted'; i.textContent='No reviews yet'; els.reviews.appendChild(i); } else { arr.slice().reverse().forEach(r=>{ const d = document.createElement('div'); d.className='review-item'; d.innerHTML = `<div style="display:flex; justify-content:space-between;"><strong>${r.name||'Anonymous'}</strong><span>★ ${r.score}</span></div><div class="muted">${r.text}</div>`; els.reviews.appendChild(d); }); }
+      els.mLike.onclick = ()=>{ toggleLike(m.id); openModal(m); };
+      els.mWatch.onclick = ()=>{ toggleWatch(m.id); openModal(m); };
+      els.mWrite.onclick = ()=>{ els.form.style.display = els.form.style.display==='none'?'grid':'none'; };
+      els.rSubmit.onclick = ()=>{ const name = els.rName.value.trim()||'Anonymous'; const score = Number(els.rScore.value||0); const text = els.rText.value.trim(); if(!score || score<1 || score>10 || !text){ alert('Please provide score (1-10) and review text'); return; } addReview(m.id,name,score,text); els.rName.value=''; els.rScore.value=''; els.rText.value=''; els.form.style.display='none'; openModal(m); };
+      els.backdrop.style.display='block'; els.modal.style.display='flex'; document.body.style.overflow='hidden';
+    }
+
+    function closeModal(){ els.backdrop.style.display='none'; els.modal.style.display='none'; document.body.style.overflow='auto'; state.selected=null; }
+
+    els.close.onclick = closeModal; els.backdrop.onclick = closeModal; document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeModal(); });
+    els.search.addEventListener('input', e=>{ state.query = e.target.value; render(); });
+    els.sort.addEventListener('change', e=>{ state.sort = e.target.value; render(); });
+    els.brand.onclick = ()=>{ state = { genre:'All', query:'', sort:'newest', selected:null }; els.search.value=''; renderFilters(); render(); };
+
+    renderFilters(); render();
+  </script>
+</body>
+</html>
